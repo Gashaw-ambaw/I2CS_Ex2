@@ -8,8 +8,7 @@ import java.io.Serializable;
  *
  */
 public class Map implements Map2D, Serializable{
-
-    // edit this class below
+	private int[][] _map;
 	/**
 	 * Constructs a w*h 2D raster map with an init value v.
 	 * @param w
@@ -32,10 +31,44 @@ public class Map implements Map2D, Serializable{
 	}
 	@Override
 	public void init(int w, int h, int v) {
+		if (w<= 0  ||  h <= 0 ){
+			throw new RuntimeException("The dimensions must be positive");
+			}
+		this._map= new int[w][h];
+
+		for(int i=0 ; i< w ; i++ ){
+			for(int j=0 ; j< h ; j++ ){
+				this._map[i][j] = v;
+			}
+		}
 
 	}
 	@Override
 	public void init(int[][] arr) {
+
+		//check if the arr legal
+		if (arr == null ||  arr.length == 0 || arr[0]==null ) {
+			throw new RuntimeException("Error : arr is null or empty");
+		}
+		int w = arr.length;
+		int h = arr[0].length;
+
+		this._map= new int[w][h];  //deep copy
+
+		for(int i = 0 ; i<w ; i++ ){
+
+            //Checking  that the arr is not  ragged
+			if((arr[i]== null  || arr[i].length != h)){
+				throw new RuntimeException("Error: the array ragged at index" + i);
+			}
+
+			//The check is clear we can copy
+			for(int j=0 ;j< h ; j++){
+               this._map[i][j]= arr[i][j];
+			}
+		}
+
+
 
 	}
 	@Override

@@ -11,6 +11,8 @@ public class Index2D implements Pixel2D {
     public Index2D(Pixel2D other) {
         this._x =  other.getX();
         this._y =  other.getY();
+
+
     }
     @Override
     public int getX() {;
@@ -41,8 +43,15 @@ public class Index2D implements Pixel2D {
     @Override
     public boolean equals(Object p) {
         boolean ans = true;
+        if (p instanceof Pixel2D ){
+            Pixel2D p2 = (Pixel2D) p;
 
-
-        return ans;
+            boolean xEqual = (this._x== p2.getX());
+            boolean yEqual = (this._y== p2.getY());
+            if(xEqual && yEqual){
+                return ans;
+            }
+        }
+        return !(ans);
     }
 }

@@ -1,5 +1,7 @@
 package assignments.Ex2;
 import java.io.Serializable;
+import java.util.LinkedList;
+import java.util.Queue;
 /**
  * This class represents a 2D map (int[w][h]) as a "screen" or a raster matrix or maze over integers.
  * This is the main class needed to be implemented.
@@ -159,6 +161,25 @@ public class Map implements Map2D, Serializable{
     @Override
     public void drawCircle(Pixel2D center, double rad, int color) {
 
+        //We surround the circle with a square, and check its range.
+		int minY= (int)(center.getY() - rad);
+		int maxY= (int)(center.getY() + rad);
+		int minX= (int)(center.getX() - rad);
+		int maxX=  (int)(center.getX() + rad);
+
+		for(int i=minX ; i<=maxX ; i++){
+			for(int j=minY ; j<=maxY ; j++){
+
+				//We check the distance using Pythagoras, if the distance is less than the radius we color.
+				double dx = i -center.getX();
+				double dy = j -center.getY();
+				double dist=Math.sqrt(dx*dx +  dy*dy);
+
+				if(dist < rad){
+					setPixel(i , j ,color);
+				}
+			}
+		}
     }
 
     @Override
@@ -200,9 +221,30 @@ public class Map implements Map2D, Serializable{
 	 * https://en.wikipedia.org/wiki/Flood_fill
 	 */
 	public int fill(Pixel2D xy, int new_v,  boolean cyclic) {
-		int ans = -1;
 
-		return ans;
+		int oldV= getPixel(xy.getX() ,xy.getY());
+
+		if(oldV == new_v || oldV== -1){
+			return 0;
+		}
+
+		Queue<Pixel2D> queue = new LinkedList<Pixel2D>();
+		queue.add(xy);
+
+		setPixel(xy.getX(), xy.getY(), new_v);
+		int count = 1;
+
+		int[] dx= {1 ,-1, 0, 0};
+		int[] dy= {0 , 0, 1 ,-1};
+		int w = getWidth();
+		int h = getHeight();
+
+		while (!queue.isEmpty()){
+
+		}
+
+
+		return 0;
 	}
 
 	@Override

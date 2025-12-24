@@ -290,4 +290,239 @@ class MapTest2 {
             // המפה החיצונית לא משתנה
             assertEquals(100, extractedMap[0][0]);
         }
+    /**
+     * בדיקה 1: מילוי פשוט בשטח פתוח
+     */
+    @Test
+    public void testFillBasic() {
+        // תיקון: הוספנו 0 כפרמטר שלישי (צבע התחלתי)
+        Map2D map = new Map(10, 10, 0);
+
+        // נמלא בצבע 1 (שחור) מנקודה (5,5)
+        int changed = map.fill(new Index2D(5, 5), 1, false);
+
+        assertEquals(100, changed, "Should fill all 100 pixels in an empty map");
+        assertEquals(1, map.getPixel(0, 0)); // בודקים שגם הפינה נצבעה
     }
+
+    /**
+     * בדיקה 2: מילוי עם חסימה (קירות)
+     */
+    @Test
+    public void testFillWithWalls() {
+        int w = 10, h = 10;
+        // תיקון: הוספנו 0 כפרמטר שלישי
+        Map2D map = new Map(w, h, 0);
+
+        // נצייר קיר בצבע 1 (שחור) סביב האמצע
+        for (int x = 3; x <= 6; x++) {
+            map.setPixel(x, 3, 1); // קיר עליון
+            map.setPixel(x, 6, 1); // קיר תחתון
+        }
+        for (int y = 3; y <= 6; y++) {
+            map.setPixel(3, y, 1); // קיר שמאלי
+            map.setPixel(6, y, 1); // קיר ימני
+        }
+
+        // נמלא את החלק הפנימי (4,4) בצבע 2 (אדום)
+        int changed = map.fill(new Index2D(4, 4), 2, false);
+
+        // בדיקות
+        assertEquals(4, changed, "Should only fill the enclosed area (4 pixels)");
+        assertEquals(2, map.getPixel(4, 4)); // בפנים - נצבע
+        assertEquals(2, map.getPixel(5, 5)); // בפנים - נצבע
+        assertEquals(0, map.getPixel(0, 0)); // בחוץ - נשאר צבע מקורי (0)
+        assertEquals(1, map.getPixel(3, 3)); // הקיר עצמו - נשאר 1
+    }
+
+    /**
+     * בדיקה 3: בדיקת ה-Cyclic (העולם המעגלי) vs העולם השטוח
+     */
+    @Test
+    public void testCyclicFill() {
+        // חלק א': cyclic = false
+        // תיקון: הוספנו 0 כפרמטר שלישי
+        Map2D map = new Map(10, 10, 0);
+
+        // נעשה קו חוצה אנכי באמצע (x=5) בצבע 1
+        for(int y=0; y<10; y++) {
+            map.setPixel(5, y, 1);
+        }
+
+        // נמלא את צד שמאל (0,0) בצבע 2.
+        int changedFalse = map.fill(new Index2D(0, 0), 2, false);
+        assertEquals(50, changedFalse, "Non-cyclic map should stop at walls");
+        assertEquals(0, map.getPixel(9, 9)); // צד ימין נשאר נקי (0)
+
+
+        // חלק ב': cyclic = true
+        // תיקון: הוספנו 0 כפרמטר שלישי
+        map = new Map(10, 10, 0);
+        for(int y=0; y<10; y++) map.setPixel(5, y, 1); // נחזיר את הקיר
+
+        // הפעם נפעיל עם cyclic = true
+        int changedTrue = map.fill(new Index2D(0, 0), 2, true);
+
+        assertEquals(90, changedTrue, "Cyclic map should wrap around boundaries");
+        assertEquals(2, map.getPixel(9, 9)); // הצליח להגיע לצד ימין!
+    }
+
+    /**
+     * בדיקה 4: מקרי קצה (Corner Cases)
+     */
+    @Test
+    public void testCornerCases() {
+        // תיקון: הוספנו 0 כפרמטר שלישי
+        Map2D map = new Map(5, 5, 0);
+
+        // 1. צביעה באותו צבע
+        map.setPixel(2, 2, 1); // נקבע צבע 1
+        int changedSame = map.fill(new Index2D(2, 2), 1, false); // ננסה לצבוע ב-1
+        assertEquals(0, changedSame, "Should return 0 if target color is same as current");
+
+        // 2. צביעה מחוץ לגבולות
+        try {
+            int changedOutOfBounds = map.fill(new Index2D(100, 100), 2, false);
+            assertEquals(0, changedOutOfBounds, "Should handle out of bounds gracefully");
+        } catch (Exception e) {
+            // התעלמות משגיאה במקרה קצה זה גם בסדר
+        }
+    }
+
+    @Test
+    public void testBasicOps() {
+        // יצירת שתי מפות זהות בגודל 10x10 עם ערך התחלתי 1
+        Map2D m1 = new Map(10, 10, 1);
+        Map2D m2 = new Map(10, 10, 1);
+        Map2D m3 = new Map(10, 10, 2); // מפה עם ערכים 2
+
+        // 1. בדיקת equals
+        assertTrue(m1.equals(m2), "Maps should be equal");
+        assertFalse(m1.equals(m3), "Maps should not be equal");
+
+        // 2. בדיקת sameDimensions
+        assertTrue(m1.sameDimensions(m3));
+        Map2D mSmall = new Map(5, 5, 1);
+        assertFalse(m1.sameDimensions(mSmall));
+
+        // 3. בדיקת addMap2D
+        // נחבר את m2 (כולה 1) ל-m1 (כולה 1). התוצאה צריכה להיות כולה 2.
+        m1.addMap2D(m2);
+        assertTrue(m1.equals(m3), "1 + 1 should be 2 everywhere");
+
+        // ננסה לחבר מפה בגודל לא מתאים (לא אמור לקרות כלום)
+        m1.addMap2D(mSmall);
+        assertTrue(m1.equals(m3), "Adding wrong dimension map should do nothing");
+
+        // 4. בדיקת mul
+        // נכפיל את m1 (שכרגע היא 2) פי 5. מצפים ל-10.
+        m1.mul(5.0);
+        assertEquals(10, m1.getPixel(0,0));
+        assertEquals(10, m1.getPixel(9,9));
+    }
+
+    @Test
+    public void testMathOperations() {
+        // יצירת מפה 10x10 מלאה בערך 2
+        Map2D m = new Map(10, 10, 2);
+
+        // בדיקת כפל: מכפילים פי 3. מצפים ל-6.
+        m.mul(3.0);
+        assertEquals(6, m.getPixel(0, 0));
+        assertEquals(6, m.getPixel(9, 9));
+
+        // בדיקת חיבור: מוסיפים מפה מלאה ב-4. מצפים ל-10.
+        Map2D toAdd = new Map(10, 10, 4);
+        m.addMap2D(toAdd);
+        assertEquals(10, m.getPixel(5, 5), "6 + 4 should be 10");
+
+        // בדיקת אי-חיבור כשהמימדים שונים (לא אמור לקרות כלום)
+        Map2D wrongSize = new Map(5, 5, 100);
+        m.addMap2D(wrongSize);
+        assertEquals(10, m.getPixel(5, 5), "Should not add maps with different sizes");
+    }
+
+    @Test
+    public void testDrawLine() {
+        Map2D m = new Map(20, 20, 0);
+
+        // ציור קו אלכסוני מ-(0,0) ל-(5,5) בצבע 1
+        Pixel2D p1 = new Index2D(0, 0);
+        Pixel2D p2 = new Index2D(5, 5);
+        m.drawLine(p1, p2, 1);
+
+        // בדיקה: ההתחלה, הסוף והאמצע צריכים להיות צבועים
+        assertEquals(1, m.getPixel(0, 0));
+        assertEquals(1, m.getPixel(5, 5));
+        assertEquals(1, m.getPixel(2, 2)); // נקודת אמצע
+
+        // בדיקה: פיקסל שלא קשור לקו צריך להישאר 0
+        assertEquals(0, m.getPixel(0, 5));
+
+        // בדיקת מקרה קצה: נקודה בודדת (קו באורך 0)
+        m.drawLine(new Index2D(10,10), new Index2D(10,10), 2);
+        assertEquals(2, m.getPixel(10, 10));
+    }
+
+    @Test
+    public void testDrawRect() {
+        Map2D m = new Map(20, 20, 0);
+        Pixel2D p1 = new Index2D(5, 5);
+        Pixel2D p2 = new Index2D(10, 10);
+
+        m.drawRect(p1, p2, 1); // מלבן מלא בצבע 1
+
+        // בדיקת פינות
+        assertEquals(1, m.getPixel(5, 5));
+        assertEquals(1, m.getPixel(10, 10));
+        assertEquals(1, m.getPixel(5, 10));
+
+        // בדיקת פנים
+        assertEquals(1, m.getPixel(7, 7));
+
+        // בדיקת חוץ
+        assertEquals(0, m.getPixel(4, 4));
+        assertEquals(0, m.getPixel(11, 11));
+    }
+
+    @Test
+    public void testDrawCircle() {
+        Map2D m = new Map(20, 20, 0);
+        Pixel2D center = new Index2D(10, 10);
+        m.drawCircle(center, 4.0, 1); // רדיוס 4
+
+        // המרכז חייב להיות צבוע
+        assertEquals(1, m.getPixel(10, 10));
+
+        // נקודה במרחק 3 (בתוך המעגל)
+        assertEquals(1, m.getPixel(13, 10));
+
+        // נקודה במרחק 5 (מחוץ למעגל)
+        assertEquals(0, m.getPixel(15, 10));
+    }
+
+    @Test
+    public void testRescale() {
+        // מפה מקורית 2x2
+        // [1, 2]
+        // [3, 4]
+        Map2D m = new Map(2, 2, 0);
+        m.setPixel(0, 0, 1);
+        m.setPixel(0, 1, 2);
+        m.setPixel(1, 0, 3);
+        m.setPixel(1, 1, 4);
+
+        // הגדלה פי 2 (אמור לצאת 4x4)
+        m.rescale(2.0, 2.0);
+
+        assertEquals(4, m.getWidth());
+        assertEquals(4, m.getHeight());
+
+        // בדיקה שהערכים נשמרו (הפינה השמאלית עליונה עדיין 1)
+        assertEquals(1, m.getPixel(0, 0));
+        // בדיקה שהפינה הימנית תחתונה היא 4
+        assertEquals(4, m.getPixel(3, 3));
+    }
+
+
+}

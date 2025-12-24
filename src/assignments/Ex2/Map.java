@@ -136,21 +136,48 @@ public class Map implements Map2D, Serializable{
         return (0 <= x) && (x < getWidth()) && (0 <= y) && (y < getHeight());
     }
 
-    @Override
-    public boolean sameDimensions(Map2D p) {
-        boolean ans = false;
 
-        return ans;
+
+	//Check if the dimensions equals
+     @Override
+    public boolean sameDimensions(Map2D p) {
+        if (p.getWidth() ==this.getWidth()){
+			if (p.getHeight() ==this.getHeight()){
+               return true;
+			}
+		}
+        return false;
     }
 
+
+	/*If the dimensions are the same,
+	we add values at the same locations.*/
     @Override
     public void addMap2D(Map2D p) {
+		if(!sameDimensions(p)){
+			return;
+		}
+
+		for(int i=0 ;i < getWidth() ; i++ ){
+			for(int j=0 ;j < getHeight() ; j++ ){
+               int value= p.getPixel(i ,  j);
+			   int sum= value + this.getPixel(i,j);
+			   setPixel(i , j , sum);
+			}
+		}
 
     }
 
     @Override
     public void mul(double scalar) {
+		for(int i=0 ;i < getWidth() ; i++ ){
+			for(int j=0 ;j < getHeight() ; j++ ){
 
+				double multi = getPixel(i ,  j)*scalar;
+				int value= (int)(multi);
+				setPixel(i , j , value);
+			}
+		}
     }
 
     @Override
@@ -184,6 +211,38 @@ public class Map implements Map2D, Serializable{
 
     @Override
     public void drawLine(Pixel2D p1, Pixel2D p2, int color) {
+		int x1= p1.getX();
+		int x2= p2.getX();
+		int y1= p1.getY();
+		int y2= p2.getY();
+
+		int moveX= Math.abs(x2-x1);
+		int moveY= Math.abs(y2-y1);
+
+		// Check which Axis is the biggest
+		int maxAxis= Math.max(moveX , moveY);
+
+        // If its the same point we color on of them and return
+		if (maxAxis == 0){
+			setPixel(x1, y1, color);
+			return;
+		}
+		/*Calculation of the number of steps taken
+		 at any time on each axis*/
+		double stepOnX = (double)(x2 - x1)/maxAxis;
+		double stepOnY = (double)(y2 - y1)/maxAxis;
+
+		double currX = x1;
+		double currY = y1;
+        // Round the numbers and color them
+		for(int i=0 ; i <= maxAxis ; i++){
+			setPixel((int)Math.round(currX),(int)Math.round(currY), color);
+            //Math.round() is long type setPixel is int type so we need to switch
+
+			//Add the distance we moved previously to the current location.
+			currX = currX + stepOnX;
+			currY = currY + stepOnY;
+		}
 
     }
 
@@ -209,42 +268,91 @@ public class Map implements Map2D, Serializable{
 	  }
     }
 
+	//This func return true if the object is Map2D and he have the same dimensions & pixels
     @Override
     public boolean equals(Object ob) {
-        boolean ans = false;
+	    // Check if the ob is null or not the type Map2D
+		if(ob == null || !(ob instanceof Map2D)){
+			return false;
+		}
 
-        return ans;
+        //Casting
+		Map2D p2 = (Map2D) ob;
+
+		//Checking that the sizes are the same
+		if (!this.sameDimensions(p2)){
+			return false;
+		}
+
+		// Going over all pixels and checking that they are the same
+		for(int i=0 ;i < this.getWidth() ; i++ ){
+			for(int j=0 ;j < this.getHeight() ; j++ ){
+
+				if(this.getPixel(i ,j) != p2.getPixel(i ,j)){
+					return  false;
+				}
+			}
+		}
+        return true;
     }
 	@Override
 	/** 
 	 * Fills this map with the new color (new_v) starting from p.
 	 * https://en.wikipedia.org/wiki/Flood_fill
 	 */
-	public int fill(Pixel2D xy, int new_v,  boolean cyclic) {
 
+    /* Implementation the Flood Fill algorithm
+	 *  pixel coloring , using the BFS algorithm
+	 */
+	public int fill(Pixel2D xy, int new_v,  boolean cyclic) {
+		//Save the original color and check that the point legal
 		int oldV= getPixel(xy.getX() ,xy.getY());
 
 		if(oldV == new_v || oldV== -1){
 			return 0;
 		}
 
+		//Restart the BFS
 		Queue<Pixel2D> queue = new LinkedList<Pixel2D>();
 		queue.add(xy);
 
+		//Color the first point
 		setPixel(xy.getX(), xy.getY(), new_v);
 		int count = 1;
 
+		//Direction arrays for 4 neighbors (up ,down ,left .right)
 		int[] dx= {1 ,-1, 0, 0};
 		int[] dy= {0 , 0, 1 ,-1};
 		int w = getWidth();
 		int h = getHeight();
 
+		//The main loop for the BFS
 		while (!queue.isEmpty()){
+			Pixel2D currPixel = queue.poll();
 
+			//Calculate the neighbors
+			for (int i=0 ; i < 4 ; i++ ){
+				 int neighborX = currPixel.getX() +dx[i];
+				 int neighborY = currPixel.getY() +dy[i];
+
+				 //Handle cyclic boundaries
+				 if(cyclic){
+					 neighborX = (neighborX + w) % w;
+					 neighborY = (neighborY + h) % h;
+				 }
+
+				 /*Checking whether the neighbor is within
+				 the boundaries and whether it is in the original color
+				 * */
+				 if((isInBounds(neighborX,neighborY)) && getPixel(neighborX,neighborY) == oldV){
+
+                     setPixel(neighborX , neighborY , new_v);
+					 queue.add( new Index2D(neighborX ,neighborY));
+					 count++;
+				 }
+			}
 		}
-
-
-		return 0;
+		return  count;
 	}
 
 	@Override

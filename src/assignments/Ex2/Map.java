@@ -71,50 +71,67 @@ public class Map implements Map2D, Serializable{
 
 
 	}
+	// Deep copy of the 2D matrix
 	@Override
 	public int[][] getMap() {
-		int[][] ans = null;
+		int w= getWidth();
+		int h =  getHeight();
+		int[][] deepCopyMap= new int[w][h];
 
-		return ans;
-	}
+		for (int i=0; i < w;i++){
+			for (int j=0; j < h;j++){
+				deepCopyMap[i][j]= _map[i][j];
+			}
+		}
+        return deepCopyMap;
+    }
 	@Override
 	public int getWidth() {
-        int ans = -1;
 
-        return ans;
+        return _map.length;
     }
 	@Override
-	public int getHeight() {
-        int ans = -1;
+	public int getHeight() {;
 
-        return ans;
+        return _map[0].length;
     }
+	//The function checks if the point is correct and legal, if so, returns the position in the array.
 	@Override
 	public int getPixel(int x, int y) {
         int ans = -1;
-
+		if (isInBounds(x,y)){
+			return  _map[x][y];
+		}
         return ans;
     }
 	@Override
 	public int getPixel(Pixel2D p) {
-        int ans = -1;
 
-        return ans;
+        return getPixel(p.getX(),p.getY());
 	}
+	//If the coordinate (x,y) is valid, put the value v in it.
 	@Override
 	public void setPixel(int x, int y, int v) {
-
+		if(isInBounds(x,y)){
+			_map[x][y]=v;
+		}
     }
 	@Override
 	public void setPixel(Pixel2D p, int v) {
-
+		setPixel(p.getX(),p.getY(),v);
 	}
 
+	// Her we're checking that the p is legal with func isInBounds
     @Override
     public boolean isInside(Pixel2D p) {
-        boolean ans = true;
-
-        return ans;
+        if(isInBounds(p.getX(),p.getY())){
+			return true;
+		}
+        return false ;
+    }
+    //A function that checks for non-negativity and range of coordinates
+	private boolean isInBounds(int x, int y) {
+        return (0 <= x) && (x < getWidth()) && (0 <= y) && (y < getHeight());
     }
 
     @Override
@@ -149,9 +166,26 @@ public class Map implements Map2D, Serializable{
 
     }
 
+    //The function receives two opposite points p1 and p2
+	// in a rectangle, checks which is larger/smaller, and
+	// then colors the rectangle.
     @Override
     public void drawRect(Pixel2D p1, Pixel2D p2, int color) {
+      int x1= p1.getX();
+	  int x2= p2.getX();
+	  int y1= p1.getY();
+	  int y2= p2.getY();
 
+	  int minY= Math.min(y1,y2);
+	  int maxY= Math.max(y1,y2);
+	  int minX= Math.min(x1,x2);
+	  int maxX= Math.max(x1,x2);
+
+	  for(int i=minX ; i<=maxX ; i++){
+		 for(int j=minY ; j<=maxY ; j++){
+            setPixel(i , j ,color);
+		}
+	  }
     }
 
     @Override

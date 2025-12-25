@@ -45,6 +45,8 @@ public class Map implements Map2D, Serializable{
 		}
 
 	}
+
+
 	@Override
 	public void init(int[][] arr) {
 
@@ -73,6 +75,8 @@ public class Map implements Map2D, Serializable{
 
 
 	}
+
+
 	// Deep copy of the 2D matrix
 	@Override
 	public int[][] getMap() {
@@ -87,16 +91,22 @@ public class Map implements Map2D, Serializable{
 		}
         return deepCopyMap;
     }
+
+
 	@Override
 	public int getWidth() {
 
         return _map.length;
     }
+
+
 	@Override
 	public int getHeight() {;
 
         return _map[0].length;
     }
+
+
 	//The function checks if the point is correct and legal, if so, returns the position in the array.
 	@Override
 	public int getPixel(int x, int y) {
@@ -106,11 +116,17 @@ public class Map implements Map2D, Serializable{
 		}
         return ans;
     }
+
+
 	@Override
 	public int getPixel(Pixel2D p) {
-
+		if(p == null){
+			return -1;
+		}
         return getPixel(p.getX(),p.getY());
 	}
+
+
 	//If the coordinate (x,y) is valid, put the value v in it.
 	@Override
 	public void setPixel(int x, int y, int v) {
@@ -118,14 +134,23 @@ public class Map implements Map2D, Serializable{
 			_map[x][y]=v;
 		}
     }
+
 	@Override
 	public void setPixel(Pixel2D p, int v) {
+		if(p == null){
+			return ;
+		}
 		setPixel(p.getX(),p.getY(),v);
 	}
+
+
 
 	// Her we're checking that the p is legal with func isInBounds
     @Override
     public boolean isInside(Pixel2D p) {
+		if(p == null){
+			return false;
+		}
         if(isInBounds(p.getX(),p.getY())){
 			return true;
 		}
@@ -141,6 +166,9 @@ public class Map implements Map2D, Serializable{
 	//Check if the dimensions equals
      @Override
     public boolean sameDimensions(Map2D p) {
+
+		 if(p == null){ return false;}
+
         if (p.getWidth() ==this.getWidth()){
 			if (p.getHeight() ==this.getHeight()){
                return true;
@@ -150,10 +178,13 @@ public class Map implements Map2D, Serializable{
     }
 
 
+
 	/*If the dimensions are the same,
 	we add values at the same locations.*/
     @Override
     public void addMap2D(Map2D p) {
+		if(p == null){return ;}
+
 		if(!sameDimensions(p)){
 			return;
 		}
@@ -168,6 +199,8 @@ public class Map implements Map2D, Serializable{
 
     }
 
+
+
     @Override
     public void mul(double scalar) {
 		for(int i=0 ;i < getWidth() ; i++ ){
@@ -180,19 +213,45 @@ public class Map implements Map2D, Serializable{
 		}
     }
 
+
+
     @Override
     public void rescale(double sx, double sy) {
 
+		if(sx<=0 || sy<=0 ){return;}
+
+		int nW =(int)(getWidth() * sx);
+		int nH = (int)(getHeight() * sy);
+
+		int[][] nMap = new int[nW][nH];
+
+		for(int i=0 ;i < nW ; i++ ){
+			for(int j=0 ;j < nH ; j++ ){
+
+				//Calculating the previous indexes
+				int preX = (int) (i/sx);
+				int preY = (int) (j/sy);
+
+				//Copy the value from the original _map to nMap
+				nMap[i][j] = _map[preX][preY];
+
+			}
+		}
+        //Saving the new map in place of the original map
+		this._map= nMap;
     }
+
+
 
     @Override
     public void drawCircle(Pixel2D center, double rad, int color) {
+        if(center == null){ return ;}
 
         //We surround the circle with a square, and check its range.
 		int minY= (int)(center.getY() - rad);
 		int maxY= (int)(center.getY() + rad);
 		int minX= (int)(center.getX() - rad);
-		int maxX=  (int)(center.getX() + rad);
+		int maxX= (int)(center.getX() + rad);
 
 		for(int i=minX ; i<=maxX ; i++){
 			for(int j=minY ; j<=maxY ; j++){
@@ -209,8 +268,11 @@ public class Map implements Map2D, Serializable{
 		}
     }
 
+
+
     @Override
     public void drawLine(Pixel2D p1, Pixel2D p2, int color) {
+		if((p1 == null) || ((p2 == null))){ return ;}
 		int x1= p1.getX();
 		int x2= p2.getX();
 		int y1= p1.getY();
@@ -246,11 +308,15 @@ public class Map implements Map2D, Serializable{
 
     }
 
+
     //The function receives two opposite points p1 and p2
 	// in a rectangle, checks which is larger/smaller, and
 	// then colors the rectangle.
     @Override
     public void drawRect(Pixel2D p1, Pixel2D p2, int color) {
+
+	  if((p1 == null) || ((p2 == null))){ return ;}
+
       int x1= p1.getX();
 	  int x2= p2.getX();
 	  int y1= p1.getY();
@@ -305,6 +371,8 @@ public class Map implements Map2D, Serializable{
 	 *  pixel coloring , using the BFS algorithm
 	 */
 	public int fill(Pixel2D xy, int new_v,  boolean cyclic) {
+		if(xy == null ){ return -1;}
+
 		//Save the original color and check that the point legal
 		int oldV= getPixel(xy.getX() ,xy.getY());
 

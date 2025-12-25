@@ -524,5 +524,197 @@ class MapTest2 {
         assertEquals(4, m.getPixel(3, 3));
     }
 
+    @Test
+    public void testInit_ExtremeCases() {
+        Map2D m = new Map(10, 10, 0);
+
+        // 1. אתחול עם מערך null
+        try {
+            m.init(null);
+            fail("Should throw RuntimeException for null array");
+        } catch (RuntimeException e) { assertTrue(true); }
+
+        // 2. אתחול עם מערך ריק לחלוטין
+        try {
+            m.init(new int[][]{});
+            fail("Should throw RuntimeException for empty array");
+        } catch (RuntimeException e) { assertTrue(true); }
+
+        // 3. אתחול עם שורה שהיא null (מערך פגום)
+        try {
+            int[][] badArr = new int[5][5];
+            badArr[2] = null; // השורה השלישית מחוקה
+            m.init(badArr);
+            fail("Should throw RuntimeException for ragged/null row in array");
+        } catch (RuntimeException e) { assertTrue(true); }
+
+        // 4. אתחול עם מערך "משונן" (Ragged Array) - שורות באורך שונה
+        try {
+            int[][] ragged = {{1,2}, {1,2,3}, {1}};
+            m.init(ragged);
+            fail("Should throw RuntimeException for ragged array");
+        } catch (RuntimeException e) { assertTrue(true); }
+
+        // 5. אתחול עם מימדים שליליים בבנאי הרגיל
+        try {
+            new Map(-5, 10, 0);
+            fail("Should throw RuntimeException for negative dimensions");
+        } catch (RuntimeException e) { assertTrue(true); }
+    }
+
+    // ==========================================================
+    // 2. בדיקות עבור getPixel / setPixel / isInside
+    // ==========================================================
+    @Test
+    public void testPixels_NullAndBounds() {
+        Map2D m = new Map(10, 10, 0);
+
+        // 1. בדיקת null ב-getPixel
+        assertEquals(-1, m.getPixel(null), "getPixel(null) should return -1 (error)");
+
+        // 2. בדיקת null ב-isInside
+        assertFalse(m.isInside(null), "isInside(null) should return false");
+
+        // 3. בדיקת null ב-setPixel (אסור שיקרוס)
+        try {
+            m.setPixel(null, 5);
+        } catch (NullPointerException e) {
+            fail("setPixel(null) crashed!");
+        }
+
+        // 4. נקודה מחוץ לגבולות (שלילי)
+        assertEquals(-1, m.getPixel(new Index2D(-1, -1)));
+        assertFalse(m.isInside(new Index2D(-5, 0)));
+
+        // 5. נקודה מחוץ לגבולות (גדול מדי)
+        assertEquals(-1, m.getPixel(new Index2D(100, 100)));
+        m.setPixel(new Index2D(100, 100), 5); // לא אמור לקרות כלום
+    }
+
+    // ==========================================================
+    // 3. בדיקות עבור פונקציות הציור (Draw)
+    // ==========================================================
+    @Test
+    public void testDrawing_Robustness() {
+        Map2D m = new Map(20, 20, 0);
+        Pixel2D p1 = new Index2D(5, 5);
+
+        // 1. drawLine עם פרמטרים null
+        try {
+            m.drawLine(null, p1, 1);
+            m.drawLine(p1, null, 1);
+            m.drawLine(null, null, 1);
+        } catch (Exception e) { fail("drawLine crashed on null input"); }
+
+        // 2. drawRect עם פרמטרים null
+        try {
+            m.drawRect(null, p1, 1);
+            m.drawRect(p1, null, 1);
+        } catch (Exception e) { fail("drawRect crashed on null input"); }
+
+        // 3. drawCircle עם מרכז null
+        try {
+            m.drawCircle(null, 5, 1);
+        } catch (Exception e) { fail("drawCircle crashed on null center"); }
+
+        // 4. ציור מחוץ לגבולות (לא אמור לזרוק שגיאה, פשוט לצייר רק מה שבפנים)
+        m.drawCircle(new Index2D(0,0), 500, 2); // מעגל ענק
+        assertEquals(2, m.getPixel(0,0)); // המרכז צבוע
+
+        // 5. קו שמתחיל בפנים ונגמר רחוק בחוץ
+        m.drawLine(new Index2D(0,0), new Index2D(-100, -100), 3);
+        assertEquals(3, m.getPixel(0,0));
+    }
+
+    // ==========================================================
+    // 4. בדיקות עבור fill (דלי צבע)
+    // ==========================================================
+    @Test
+    public void testFill_Robustness() {
+        Map2D m = new Map(10, 10, 0);
+
+        // 1. שליחת נקודה null
+        // 1. שליחת נקודה null (עם פרמטר שלישי false)
+        int count = m.fill(null, 5, false);
+
+// 2. שליחת נקודה מחוץ לגבולות
+        count = m.fill(new Index2D(50, 50), 5, false);
+
+// 3. מילוי באותו צבע
+        m.fill(new Index2D(0,0), 1, false);
+        assertEquals(0, count, "Should not fill if color is same");
+
+        // 4. מילוי כשהנקודה ההתחלתית לא חוקית (-1)
+        // (סימולציה של באג במערכת שבו פיקסל לא אותחל)
+        // לא קריטי אם זה לא עובר אצלך כרגע, תלוי במימוש
+    }
+
+    // ==========================================================
+    // 5. בדיקות עבור פעולות על מפות (add, copy)
+    // ==========================================================
+    @Test
+    public void testMapOperations_Robustness() {
+        Map2D m1 = new Map(5, 5, 1);
+
+        // 1. חיבור עם null
+        try {
+            m1.addMap2D(null); // לא אמור לקרוס
+        } catch (Exception e) { fail("addMap2D(null) crashed"); }
+
+        // 2. חיבור עם מפה בגודל שונה (לא אמור לקרות כלום)
+        Map2D mDiff = new Map(10, 10, 5);
+        m1.addMap2D(mDiff);
+        assertEquals(1, m1.getPixel(0,0), "Should not add maps with different sizes");
+
+        // 3. בדיקת copy: האם זה באמת Deep Copy?
+
+
+        // 4. בדיקת equals עם null
+        assertFalse(m1.equals(null));
+
+        // 5. בדיקת equals עם אובייקט אחר (מחרוזת למשל)
+        assertFalse(m1.equals("String"));
+    }
+
+    @Test
+    public void testRescaleLogic() {
+        // יצירת מפה התחלתית 2x2
+        Map2D m = new Map(2, 2, 0);
+        m.setPixel(0, 0, 1); // צובעים פיקסל אחד בלבן כדי שיהיה מה לבדוק
+        m.setPixel(1, 1, 2); // ועוד אחד בצבע אחר
+
+        // --- בדיקה 1: הגדלה פי 2 (מצופה: 4x4) ---
+        m.rescale(2.0, 2.0);
+        assertEquals(4, m.getWidth(), "Test 1 Failed: Width should be 4");
+        assertEquals(4, m.getHeight(), "Test 1 Failed: Height should be 4");
+
+        // --- בדיקה 2: בדיקת תוכן אחרי הגדלה (האם הפיקסלים 'נמרחו' נכון?) ---
+        // הפיקסל המקורי ב-(0,0) צריך להיות עכשיו גם ב-(0,0), (0,1), (1,0), (1,1)
+        assertEquals(1, m.getPixel(1, 1), "Test 2 Failed: Pixel spread logic is wrong");
+        assertEquals(2, m.getPixel(2, 2), "Test 2 Failed: Expected pixel value 2 here");
+        // --- בדיקה 3: הקטנה חזרה למקור (מצופה: 2x2) ---
+        m.rescale(0.5, 0.5);
+        assertEquals(2, m.getWidth(), "Test 3 Failed: Width should be back to 2");
+
+        // --- בדיקה 4: עיוות (מתיחה רק לרוחב) ---
+        // כרגע 2x2 -> נכפיל רוחב ב-5 -> מצופה 10x2
+        m.rescale(5.0, 1.0);
+        assertEquals(10, m.getWidth(), "Test 4 Failed: Width should be 10");
+        assertEquals(2, m.getHeight(), "Test 4 Failed: Height should stay 2");
+
+        // --- בדיקה 5: כפל ב-1 (זהות) ---
+        int oldW = m.getWidth();
+        m.rescale(1.0, 1.0);
+        assertEquals(oldW, m.getWidth(), "Test 5 Failed: Scale by 1 should not change size");
+
+        // --- בדיקה 6: קלט שלילי (אסור שישתנה כלום) ---
+        m.rescale(-5.0, 2.0);
+        assertEquals(10, m.getWidth(), "Test 6 Failed: Negative scale should be ignored");
+
+        // --- בדיקה 7: קלט אפס (אסור שישתנה כלום) ---
+        m.rescale(0, 0);
+        assertEquals(10, m.getWidth(), "Test 7 Failed: Scale by 0 should be ignored");
+    }
+
 
 }

@@ -716,5 +716,149 @@ class MapTest2 {
         assertEquals(10, m.getWidth(), "Test 7 Failed: Scale by 0 should be ignored");
     }
 
+    @Test
+    public void testAllDistanceConstraints() {
+        // יצירת מפה בסיסית 5x5 לבדיקות
+        Map2D map = new Map(5, 5, 0);
+        // נגדיר את צבע המכשול להיות 1
+        int obsColor = 1;
+
+        // --- בדיקה 1: קלט null (חייב להחזיר null) ---
+        assertNull(map.allDistance(null, obsColor, false),
+                "Check 1 Failed: Should return null for null start point");
+
+        // --- בדיקה 2: נקודת התחלה מחוץ לגבולות (חייב להחזיר null) ---
+        Pixel2D outOfBounds = new Index2D(-1, 0);
+        assertNull(map.allDistance(outOfBounds, obsColor, false),
+                "Check 2 Failed: Should return null for start point out of bounds");
+
+        // --- בדיקה 3: התחלה בתוך קיר (חייב להחזיר null לפי מה שסיכמנו) ---
+        map.setPixel(2, 2, obsColor); // מציבים קיר במרכז
+        Pixel2D wallPoint = new Index2D(2, 2);
+        assertNull(map.allDistance(wallPoint, obsColor, false),
+                "Check 3 Failed: Should return null when starting inside a wall");
+
+        // --- בדיקה 4: מרחק פשוט ללא מכשולים (מרחק מנהטן) ---
+        // נתחיל ב-(0,0), המרחק ל-(0,2) צריך להיות 2
+        Pixel2D start = new Index2D(0, 0);
+        Map2D distMap = map.allDistance(start, obsColor, false);
+        assertNotNull(distMap, "Check 4 Failed: Result map should not be null");
+        assertEquals(0, distMap.getPixel(0, 0), "Check 4 Failed: Distance to self must be 0");
+        assertEquals(2, distMap.getPixel(0, 2), "Check 4 Failed: Straight line distance error");
+
+        // --- בדיקה 5: עקיפת מכשול (צורת 'ח') ---
+        // נבנה קיר שחוסם את הדרך הישירה
+        map.init(5, 5, 0);
+        map.setPixel(1, 0, obsColor);
+        map.setPixel(1, 1, obsColor);
+        map.setPixel(1, 2, obsColor);
+        // מפה:
+        // S  #  .
+        // .  #  .
+        // .  #  T
+        // כדי להגיע מ-(0,0) ל-(2,0) צריך לעקוף מלמטה: (0,0)->(0,1)->(0,2)->(0,3)->(1,3)->(2,3)->(2,2)->(2,1)->(2,0)
+        // זה מסלול ארוך. בוא נבדוק משהו פשוט יותר: עקיפה קטנה.
+        distMap = map.allDistance(new Index2D(0,0), obsColor, false);
+        // הנקודה (2,0) נמצאת מעבר לקיר. המרחק הישיר הוא 2, אבל עם הקיר זה יותר.
+        assertTrue(distMap.getPixel(2, 0) > 2, "Check 5 Failed: Should take a longer path around the wall");
+
+        // --- בדיקה 6: שטח סגור (Unreachable) ---
+        // נסגור את הפינה (4,4) בקירות
+        map.setPixel(3, 4, obsColor);
+        map.setPixel(4, 3, obsColor);
+        distMap = map.allDistance(new Index2D(0, 0), obsColor, false);
+        assertEquals(-1, distMap.getPixel(4, 4), "Check 6 Failed: Unreachable area should be -1");
+
+        // --- בדיקה 7: Cyclic - מעבר קיר (פאק-מן) ---
+        // מפה נקייה
+        map.init(5, 5, 0);
+        // ללא ציקלי: המרחק בין (0,0) ל-(4,0) הוא 4.
+        // עם ציקלי: המרחק הוא 1 (צעד אחד שמאלה).
+        Map2D cyclicMap = map.allDistance(new Index2D(0, 0), obsColor, true);
+        assertEquals(1, cyclicMap.getPixel(4, 0), "Check 7 Failed: Cyclic distance should be 1 (wrap around)");
+
+        // --- בדיקה 8: Cyclic - עקיפת מכשול דרך הצד השני ---
+        // נחסום את האמצע, הדרך הקצרה תהיה מסביב לעולם
+        map.setPixel(1, 0, obsColor);
+        map.setPixel(2, 0, obsColor);
+        map.setPixel(3, 0, obsColor);
+        // אנחנו ב-(0,0), רוצים להגיע ל-(4,0). יש קירות באמצע.
+        // הכי מהיר: ללכת שמאלה (ציקלי) ולהגיע מיד.
+        cyclicMap = map.allDistance(new Index2D(0, 0), obsColor, true);
+        assertEquals(1, cyclicMap.getPixel(4, 0), "Check 8 Failed: Path should use cyclic boundary to avoid walls");
+
+        // --- בדיקה 9: מפה של 1x1 ---
+        Map2D tinyMap = new Map(1, 1, 0);
+        Map2D tinyDist = tinyMap.allDistance(new Index2D(0,0), obsColor, false);
+        assertEquals(0, tinyDist.getPixel(0,0), "Check 9 Failed: 1x1 map distance should be 0");
+
+        // --- בדיקה 10: וידוא שהמפה המקורית לא נהרסה ---
+        // אחרי כל החישובים, המפה המקורית עדיין צריכה להכיל 0 ו-obsColor, לא מרחקים.
+        // בבדיקה 8 שמנו קירות. נבדוק שהם שם.
+        assertEquals(obsColor, map.getPixel(2, 0), "Check 10 Failed: Original map was modified! (Should be immutable)");
+    }
+
+    @Test
+    public void testShortestPathLogic() {
+        Map2D map = new Map(5, 5, 0);
+        int obsColor = 1;
+
+        // --- בדיקה 1, 2, 3, 4 (בדיקות קודמות...) ---
+        // (אני מדלג עליהן כי הן עובדות לפי הלוג)
+
+        // --- בדיקה 5: אזור מבודד (Island) ---
+        map.init(5, 5, 0); // איפוס
+        map.setPixel(0, 1, obsColor);
+        map.setPixel(1, 0, obsColor);
+        Pixel2D[] path = map.shortestPath(new Index2D(0, 0), new Index2D(3, 3), obsColor, false);
+        assertNull(path, "Check 5 Failed: Should return null if start point is trapped");
+
+        // --- בדיקה 6: עקיפת מכשול (Obstacle Avoidance) ---
+        // !!! התיקון הקריטי: חייבים לאפס את המפה מחדש !!!
+        map.init(5, 5, 0);
+
+        map.setPixel(1, 0, obsColor); // חוסם רק את (1,0)
+        // (0,1) נשאר פנוי!
+
+        path = map.shortestPath(new Index2D(0, 0), new Index2D(2, 0), obsColor, false);
+
+        assertNotNull(path, "Check 6 Failed: Path turned out null! (Algorithm didn't find the path)");
+        assertTrue(path.length > 3, "Check 6 Failed: Path should go around the wall");
+
+        // --- בדיקה 7: Cyclic ---
+        map.init(5, 5, 0); // איפוס נוסף ליתר ביטחון
+        path = map.shortestPath(new Index2D(0, 0), new Index2D(4, 0), obsColor, true);
+        assertEquals(2, path.length, "Check 7 Failed: Cyclic path error");
+    }
+
+    @Test
+    public void testMapConstructorDeepCopy() {
+        // שלב 1: ניצור מערך "ידני" שמדמה את מה שקורה בתוך allDistance
+        // נניח שזה מערך מרחקים שחושב על ידי האלגוריתם
+        int[][] rawData = {
+                {0, 1, 2},  // עמודה 0
+                {1, 2, 3},  // עמודה 1
+                {2, 3, 8}   // עמודה 2 (שים לב ל-8, כמו בלוג שלך)
+        };
+
+        // שלב 2: נשתמש בבנאי החשוד כדי ליצור מפה
+        Map2D myMap = new Map(rawData);
+
+        // שלב 3: נבדוק שהערכים עברו נכון (בדיקת העתקה)
+        System.out.println("Checking value at (2,2)...");
+        int val = myMap.getPixel(2, 2);
+        assertEquals(8, val, "Constructor Failed! Expected 8 but got " + val + ". Did you copy the array?");
+
+        assertEquals(0, myMap.getPixel(0, 0), "Start point copy failed");
+        assertEquals(2, myMap.getPixel(0, 2), "Copy failed at (0,2)");
+
+        // שלב 4: בדיקת העתקה עמוקה (Deep Copy)
+        // נשנה את המערך המקורי ונבדוק שהמפה *לא* השתנתה
+        rawData[2][2] = 999;
+        assertEquals(8, myMap.getPixel(2, 2), "Deep Copy Failed! The map is pointing to the original array instead of copying it.");
+
+        System.out.println("Test Passed! Constructor is working correctly.");
+    }
+
 
 }

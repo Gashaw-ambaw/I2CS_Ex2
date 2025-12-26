@@ -1,5 +1,8 @@
 package assignments.Ex2;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class Index2D implements Pixel2D {
     private int _x;
     private int _y;
@@ -54,4 +57,7 @@ public class Index2D implements Pixel2D {
         }
         return !(ans);
     }
+
 }
+
+

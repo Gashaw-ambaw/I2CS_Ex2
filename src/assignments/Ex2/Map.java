@@ -30,6 +30,13 @@ public class Map implements Map2D, Serializable{
 	 */
 	public Map(int[][] data) {
 		init(data);
+
+		if (data != null && data.length > 2 && data[0].length > 2) {
+			// אנחנו בודקים ספציפית את הנקודה (2,0) שבה אמור להיות 8 בבדיקה 6
+			System.out.println(">>> CONSTRUCTOR TRUTH: I received value " + data[2][0] + " at [2][0]");
+			System.out.println(">>> MEMORY TRUTH: My new _map has " + this.getPixel(2,0) + " at [2][0]");
+		}
+
 	}
 	@Override
 	public void init(int w, int h, int v) {
@@ -56,7 +63,6 @@ public class Map implements Map2D, Serializable{
 		}
 		int w = arr.length;
 		int h = arr[0].length;
-
 		this._map= new int[w][h];  //deep copy
 
 		for(int i = 0 ; i<w ; i++ ){
@@ -65,7 +71,6 @@ public class Map implements Map2D, Serializable{
 			if((arr[i]== null  || arr[i].length != h)){
 				throw new RuntimeException("Error: the array ragged at index" + i);
 			}
-
 			//The check is clear we can copy
 			for(int j=0 ;j< h ; j++){
                this._map[i][j]= arr[i][j];
@@ -170,7 +175,7 @@ public class Map implements Map2D, Serializable{
 		 if(p == null){ return false;}
 
         if (p.getWidth() ==this.getWidth()){
-			if (p.getHeight() ==this.getHeight()){
+			if (p.getHeight() == this.getHeight()){
                return true;
 			}
 		}
@@ -423,22 +428,121 @@ public class Map implements Map2D, Serializable{
 		return  count;
 	}
 
+
+
 	@Override
 	/**
 	 * BFS like shortest the computation based on iterative raster implementation of BFS, see:
 	 * https://en.wikipedia.org/wiki/Breadth-first_search
 	 */
 	public Pixel2D[] shortestPath(Pixel2D p1, Pixel2D p2, int obsColor, boolean cyclic) {
-		Pixel2D[] ans = null;  // the result.
 
-		return ans;
+		if((p1 == null) || ((p2 == null))){ return null;}
+
+		Map2D disMap= allDistance(p1 , obsColor , cyclic);  // We get the map of the distance from p1 to all.
+
+		int dis2P2= disMap.getPixel(p2);                   //Get the dist to p2 from disMap
+		if (dis2P2 == -1){return null;}                    //If there is no path from p1 to p2 return null
+
+		Pixel2D[] path = new  Pixel2D[dis2P2 + 1];
+
+		Pixel2D curr = p2;                                  //Filling the array from the last point to the beginning
+		path[dis2P2]= p2;
+
+		int[] dx= {1 ,-1, 0, 0};          //Movement directions: up, down, left, right
+		int[] dy= {0 , 0, 1 ,-1};
+		int w = getWidth();
+		int h = getHeight();
+
+		for (int i=dis2P2-1 ; i>=0 ; i--){
+			for (int j=0 ; j < 4 ; j++ ) {
+				int nX = curr.getX() + dx[j];
+				int nY = curr.getY() + dy[j];
+
+				//If it is cyclic we fix
+				if(cyclic){
+					nX = (nX + w) % w;
+					nY = (nY + h) % h;
+				}                       // If it is not cyclic and not within the bounds, skip to the next neighbor
+				else if (!isInBounds(nX ,nY)) {
+					continue;
+				}
+				//If the neighbor has the correct distance, add it to the array.
+				if (disMap.getPixel(nX , nY) == i){
+
+					curr = new Index2D(nX , nY);
+					path[i] = curr;
+					break;
+				}
+			}
+
+		}
+		return path;
 	}
-    @Override
-    public Map2D allDistance(Pixel2D start, int obsColor, boolean cyclic) {
-        Map2D ans = null;  // the result.
 
-        return ans;
-    }
+	@Override
+	public Map2D allDistance(Pixel2D start, int obsColor, boolean cyclic){
+
+		/*Check: The point is not empty, the point is within the legal range,
+		 *the starting point is not a wall */
+		if((start == null ) || (!isInside(start)) || ( this.getPixel(start) ==obsColor )){
+			return null;}
+
+		int[][] distMap = new int[getWidth()][getHeight()];
+
+		for(int i=0 ;i < this.getWidth() ; i++ ){
+			for(int j=0 ;j < this.getHeight() ; j++ ){
+				distMap[i][j]= -1;
+			}
+		}
+		int xS=start.getX();
+		int yS=start.getY();
+		distMap[xS][yS] = 0 ;         //Initializing the starting point
+
+		Queue<Pixel2D> q = new LinkedList<Pixel2D>();
+		q.add(start);
+
+		int[] dx= {1 ,-1, 0, 0};
+		int[] dy= {0 , 0, 1 ,-1};                     //Movement directions: up, down, left, right
+		int w = getWidth();
+		int h = getHeight();
+
+		//The main loop for the BFS
+		while (!q.isEmpty()){
+			Pixel2D currPixel = q.poll();
+			int currX= currPixel.getX();
+			int currY= currPixel.getY();
+
+			//Calculate the neighbors
+			for (int i=0 ; i < 4 ; i++ ) {
+				int nX = currPixel.getX() + dx[i];
+				int nY = currPixel.getY() + dy[i];
+
+				//If it is cyclic we fix
+				if(cyclic){
+					nX = (nX + w) % w;
+					nY = (nY + h) % h;
+				}                                    // If it is not cyclic and
+				else if (!isInBounds(nX ,nY)) {      //not within the bounds, skip to the next neighbor
+					continue;
+				}
+
+				//Check if its obstacle, or we already visit there if yes  we continue to the next neighbor
+				if ((distMap[nX][nY] != -1) || (getPixel(nX, nY) == obsColor)) {
+					continue;
+				}
+
+				//Neighbor's distance = current distance +1
+				distMap[nX][nY] = distMap[currX][currY] +1;
+				// Add the neighbor to queue
+				q.add(new Index2D(nX , nY));
+			}
+		}
+		return new Map(distMap);
+	}
+
+
 	////////////////////// Private Methods ///////////////////////
 
 }
+

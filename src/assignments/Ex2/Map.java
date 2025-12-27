@@ -30,14 +30,9 @@ public class Map implements Map2D, Serializable{
 	 */
 	public Map(int[][] data) {
 		init(data);
-
-		if (data != null && data.length > 2 && data[0].length > 2) {
-			// אנחנו בודקים ספציפית את הנקודה (2,0) שבה אמור להיות 8 בבדיקה 6
-			System.out.println(">>> CONSTRUCTOR TRUTH: I received value " + data[2][0] + " at [2][0]");
-			System.out.println(">>> MEMORY TRUTH: My new _map has " + this.getPixel(2,0) + " at [2][0]");
-		}
-
 	}
+
+
 	@Override
 	public void init(int w, int h, int v) {
 		if (w<= 0  ||  h <= 0 ){
@@ -100,14 +95,12 @@ public class Map implements Map2D, Serializable{
 
 	@Override
 	public int getWidth() {
-
         return _map.length;
     }
 
 
 	@Override
 	public int getHeight() {;
-
         return _map[0].length;
     }
 
@@ -261,9 +254,9 @@ public class Map implements Map2D, Serializable{
 		for(int i=minX ; i<=maxX ; i++){
 			for(int j=minY ; j<=maxY ; j++){
 
-				//We check the distance using Pythagoras, if the distance is less than the radius we color.
-				double dx = i -center.getX();
-				double dy = j -center.getY();
+				                                          //We check the distance using Pythagoras,
+				double dx = i -center.getX();             //if the distance is less than
+				double dy = j -center.getY();             //the radius we color.
 				double dist=Math.sqrt(dx*dx +  dy*dy);
 
 				if(dist < rad){
@@ -440,6 +433,7 @@ public class Map implements Map2D, Serializable{
 		if((p1 == null) || ((p2 == null))){ return null;}
 
 		Map2D disMap= allDistance(p1 , obsColor , cyclic);  // We get the map of the distance from p1 to all.
+        if(disMap==null){return null;}
 
 		int dis2P2= disMap.getPixel(p2);                   //Get the dist to p2 from disMap
 		if (dis2P2 == -1){return null;}                    //If there is no path from p1 to p2 return null
@@ -479,6 +473,7 @@ public class Map implements Map2D, Serializable{
 		}
 		return path;
 	}
+
 
 	@Override
 	public Map2D allDistance(Pixel2D start, int obsColor, boolean cyclic){

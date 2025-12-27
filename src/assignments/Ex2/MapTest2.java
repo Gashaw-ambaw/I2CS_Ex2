@@ -2,6 +2,11 @@ package assignments.Ex2;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 
 class MapTest2 {
 
@@ -859,6 +864,162 @@ class MapTest2 {
 
         System.out.println("Test Passed! Constructor is working correctly.");
     }
+
+    @Test
+    public void testComprehensiveMapLogic() {
+        // --- אתחול ובדיקות בסיסיות (1-5) ---
+        Map2D map = new Map(10, 10, 0); // מפה 10 על 10 ריקה (ערך 0)
+
+        // 1. בדיקת רוחב תקין
+        assertEquals(10, map.getWidth(), "Test 1 Failed: Width should be 10");
+
+        // 2. בדיקת גובה תקין
+        assertEquals(10, map.getHeight(), "Test 2 Failed: Height should be 10");
+
+        // 3. בדיקת ערך דיפולטיבי
+        assertEquals(0, map.getPixel(5, 5), "Test 3 Failed: Default pixel value should be 0");
+
+        // 4. בדיקת גבולות: נקודה שלילית (מקרה קיצון)
+        assertFalse(map.isInside(new Index2D(-1, 0)), "Test 4 Failed: (-1,0) is outside");
+
+        // 5. בדיקת גבולות: נקודה מחוץ למערך (מקרה קיצון - Off by one)
+        // אם הגודל הוא 10, האינדקס המקסימלי הוא 9. לכן 10 הוא בחוץ.
+        assertFalse(map.isInside(new Index2D(10, 10)), "Test 5 Failed: (10,10) is outside for size 10x10");
+
+
+        // --- שינוי ערכים (6-8) ---
+        map.setPixel(0, 0, 1); // שם קיר בפינה
+
+        // 6. בדיקת שינוי ערך
+        assertEquals(1, map.getPixel(0, 0), "Test 6 Failed: Pixel (0,0) should be 1");
+
+        // 7. בדיקת השפעה על פיקסל אחר
+        assertEquals(0, map.getPixel(0, 1), "Test 7 Failed: Pixel (0,1) should remain 0");
+
+        // 8. בדיקת דריסה של ערך קיים
+        map.setPixel(0, 0, 2);
+        assertEquals(2, map.getPixel(0, 0), "Test 8 Failed: Pixel (0,0) should be updated to 2");
+        map.setPixel(0, 0, 0); // מחזיר ל-0 (נקי)
+
+
+        // --- בדיקות מסלול ShortestPath (9-16) ---
+
+        // בניית קיר פשוט: חוסם את (2,1)
+        map.setPixel(2, 1, 1);
+        // נקודות: התחלה (2,0), יעד (2,2). הקיר באמצע.
+        Pixel2D start = new Index2D(2, 0);
+        Pixel2D end = new Index2D(2, 2);
+
+        // 9. בדיקת מציאת מסלול כשיש מכשול
+        Pixel2D[] path = map.shortestPath(start, end, 1, false);
+        assertNotNull(path, "Test 9 Failed: Path should not be null");
+
+        // 10. בדיקת אורך מסלול (חייב להיות ארוך ממרחק אווירי כי עוקפים קיר)
+        // המרחק הישיר הוא 2, אבל בגלל הקיר צריך ללכת לצד ולחזור (לפחות 4 צעדים)
+        assertTrue(path.length > 3, "Test 10 Failed: Path should go around the wall");
+
+        // 11. בדיקת הגעה ליעד
+        assertEquals(end, path[path.length - 1], "Test 11 Failed: Last point should be the target");
+
+        // 12. בדיקת נקודת ההתחלה
+        assertEquals(start, path[0], "Test 12 Failed: First point should be start");
+
+        // 13. מקרה קיצון: התחלה בתוך קיר
+        Pixel2D wallPoint = new Index2D(2, 1);
+        Pixel2D[] badPath1 = map.shortestPath(wallPoint, end, 1, false);
+        assertNull(badPath1, "Test 13 Failed: Should return null if start is inside obstacle");
+
+        // 14. מקרה קיצון: יעד בתוך קיר
+        Pixel2D[] badPath2 = map.shortestPath(start, wallPoint, 1, false);
+        assertNull(badPath2, "Test 14 Failed: Should return null if end is inside obstacle");
+
+        // 15. מקרה קיצון: התחלה שווה לסוף
+        Pixel2D[] samePath = map.shortestPath(start, start, 1, false);
+        assertNotNull(samePath, "Test 15 Failed: Path from point to itself should not be null");
+        assertEquals(1, samePath.length, "Test 16 Failed: Path to self should be length 1 (only the point itself)");
+
+
+        // --- בדיקות AllDistance (17-21) ---
+
+        // יצירת "כלא" - נקודה מוקפת קירות
+        // הקיר ב-(2,1) כבר קיים. נוסיף עוד מסביב ל-(2,2)
+        map.setPixel(1, 2, 1);
+        map.setPixel(3, 2, 1);
+        map.setPixel(2, 3, 1);
+        // עכשיו (2,2) חסומה מ-למעלה, למטה, ימינה, שמאלה.
+
+        Map2D distances = map.allDistance(new Index2D(0, 0), 1, false);
+
+        // 17. המרחק לעצמי הוא 0
+        assertEquals(0, distances.getPixel(0, 0), "Test 17 Failed: Distance to start should be 0");
+
+        // 18. המרחק לשכן הוא 1
+        assertEquals(1, distances.getPixel(0, 1), "Test 18 Failed: Distance to neighbor should be 1");
+
+        // 19. נקודה בלתי אפשרית (הכלא שיצרנו) צריכה להיות -1
+        assertEquals(-1, distances.getPixel(2, 2), "Test 19 Failed: Unreachable point should be -1");
+
+        // 20. קירות צריכים להישאר -1 במפת המרחקים
+        assertEquals(-1, distances.getPixel(2, 1), "Test 20 Failed: Wall distance should be -1");
+
+        // 21. בדיקת Null (קלט לא תקין)
+        assertNull(map.shortestPath(null, end, 1, false), "Test 21 Failed: Null start point should return null");
+    }
+
+
+    @Test
+    void testSaveMap() {
+        // --- 1. Setup: Create a small, predictable map ---
+        // We use a 2x2 map to keep it simple
+        Map2D map = new Map(2, 2, 0);
+
+        // Set specific values to identify them later in the file
+        map.setPixel(0, 0, 1);  // Top-Left
+        map.setPixel(1, 0, 2);  // Top-Right
+        map.setPixel(0, 1, 3);  // Bottom-Left
+        map.setPixel(1, 1, 4);  // Bottom-Right
+
+        /* The Matrix should look like:
+           1, 2
+           3, 4
+         */
+
+        String fileName = "junit_test_save.txt";
+
+        // --- 2. Action: Run the save function ---
+        Ex2_GUI.saveMap(map, fileName);
+
+        // --- 3. Assertion: Verify the file content ---
+        File file = new File(fileName);
+
+        // Check A: Does the file exist?
+        assertTrue(file.exists(), "The file should be created on disk");
+
+        try {
+            Scanner scanner = new Scanner(file);
+
+            // Check B: First line must be dimensions "width,height"
+            assertTrue(scanner.hasNext(), "File is empty");
+            String header = scanner.nextLine();
+            assertEquals("2,2", header, "Header should be width,height");
+
+            // Check C: First row of data
+            String row0 = scanner.nextLine();
+            assertEquals("1,2", row0, "First row content is wrong");
+
+            // Check D: Second row of data
+            String row1 = scanner.nextLine();
+            assertEquals("3,4", row1, "Second row content is wrong");
+
+            scanner.close();
+
+        } catch (FileNotFoundException e) {
+            fail("Could not read the file for verification");
+        }
+
+
+    }
+
 
 
 }

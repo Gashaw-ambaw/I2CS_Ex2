@@ -1,4 +1,5 @@
 package assignments.Ex2;
+
 import java.awt.Color;
 import java.io.FileNotFoundException;
 
@@ -8,37 +9,37 @@ import java.io.FileNotFoundException;
  * The class has save and load functions, and a GUI draw function.
  * You should implement this class, it is recommender to use the StdDraw class, as in:
  * https://introcs.cs.princeton.edu/java/stdlib/javadoc/StdDraw.html
- *
- *
  */
 public class Ex2_GUI {
 
     public static void drawMap(Map2D map) {
-        if (map == null){return;}
+        if (map == null) {
+            return;
+        }
 
         int w = map.getWidth();
-        int h= map.getHeight();
-                                           //Graphics setting
+        int h = map.getHeight();
+        //Graphics setting
         StdDraw.setCanvasSize(Math.max(w * 20, 500), Math.max(h * 20, 500));
-        StdDraw.setXscale(0, w );           //Axis systems: x,y
-        StdDraw.setYscale(0, h );
+        StdDraw.setXscale(0, w);           //Axis systems: x,y
+        StdDraw.setYscale(0, h);
         //Cleaning the screen
         StdDraw.clear(StdDraw.WHITE);
 
-        for (int i = 0; i < w; i++){
-            for (int j = 0; j < h; j++){
+        for (int i = 0; i < w; i++) {
+            for (int j = 0; j < h; j++) {
 
-                int v =map.getPixel(i, j);      //We take the val in the point
+                int v = map.getPixel(i, j);      //We take the val in the point
                 Color colV = getColor(v);       //make the value the color of the pen
                 StdDraw.setPenColor(colV);
 
                 //Drawing the map
-                StdDraw.filledSquare( i+0.5,j+0.5,0.5 );
+                StdDraw.filledSquare(i + 0.5, j + 0.5, 0.5);
                 StdDraw.setPenColor(Color.LIGHT_GRAY);
-                StdDraw.square(i+0.5,j+  0.5,0.5 );
+                StdDraw.square(i + 0.5, j + 0.5, 0.5);
 
                 StdDraw.setPenColor(Color.BLUE);             //Drawing the numbers on the map
-                StdDraw.text(i+0.5, j+0.5,String.valueOf(v) );
+                StdDraw.text(i + 0.5, j + 0.5, String.valueOf(v));
             }
         }
         StdDraw.show();
@@ -50,46 +51,61 @@ public class Ex2_GUI {
      */
     public static Map2D loadMap(String mapFileName) {
 
-        if (mapFileName == null  || mapFileName.isEmpty()){
+        if (mapFileName == null || mapFileName.isEmpty()) {
             System.err.println("Error : mapFileName is null or empty");
             return null;
         }
         //Check whether the file we are looking for exists or not.
         java.io.File file = new java.io.File(mapFileName);
-         if (!file.exists() ) {
+        if (!file.exists()) {
             System.err.println("Error:  the file  not  found " + mapFileName);
-            return  null;
+            return null;
         }
 
-         try {
-             java.util.Scanner read = new java.util.Scanner(file);
-             if(!read.hasNext()){
-                 System.err.println("Error : the file is empty" + read);      //This check if the file is empty.
-                 read.close();
-                 return null;
-             }
-             //Now after we check the file we can
+        try {               //Open the file for reading it.
+            java.util.Scanner read = new java.util.Scanner(file);
 
+            read.useDelimiter("[\\s,]+");           //We tell  the reader to skip commas and spaces
 
-         } catch (Exception e) {          //If their error we print it.
-             e.printStackTrace();
-             return null;
-         }
+            if (!read.hasNext()) {
+                System.err.println("Error : the file is empty" + read);      //This check if the file is empty.
+                read.close();
+                return null;
+            }
+            //Now after we check the file is ok we start to read
+            //  and save the size of the map
+            int w = read.nextInt();
+            int h = read.nextInt();
+            Map2D mapR = new Map(w, h, 0);      //Memory allocation
 
-         return  null;
+            for (int i = 0; i < h; i++) {            //We loop row by row and fill
+                for (int j = 0; j < w; j++) {        //the val we read in the map
+                    if (read.hasNext()) {
+                        int val = read.nextInt();
+                        mapR.setPixel(j, i, val);
+                    }
+                }
+            }
+            read.close();
+            System.out.println("The loaded map success ");
+            return mapR;
+
+        } catch (Exception e) {          //If their error we print it.
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**
-     *
      * @param map
      * @param mapFileName
      */
     public static void saveMap(Map2D map, String mapFileName) {
-        if(map==null){
+        if (map == null) {
             System.err.println("Error : the map is null");     //Check: The map and files are
             return;
         }                                                      //correct if no error message.
-        if (mapFileName==null  || mapFileName.isEmpty()){
+        if (mapFileName == null || mapFileName.isEmpty()) {
             System.err.println("Error : mapFileName is null or empty");
             return;
         }
@@ -97,24 +113,24 @@ public class Ex2_GUI {
         try {
             java.io.PrintWriter outText = new java.io.PrintWriter(mapFileName);
 
-            int w=map.getWidth();
-            int h=map.getHeight();
+            int w = map.getWidth();
+            int h = map.getHeight();
 
-            outText.println(w + ","+ h);
+            outText.println(w + "," + h);
 
-            for (int i = 0; i < h; i++){
+            for (int i = 0; i < h; i++) {
                 for (int j = 0; j < w; j++) {
 
-                    int value= map.getPixel(j , i) ;
+                    int value = map.getPixel(j, i);
                     outText.print(value);
 
-                    if(j < w-1){
+                    if (j < w - 1) {
                         outText.print(",");
                     }
                 }
                 outText.println();
             }
-          outText.close();        //close the text
+            outText.close();        //close the text
             System.out.println(" The file saved ");
 
         } catch (Exception e) {          //If their error we print it.
@@ -123,20 +139,18 @@ public class Ex2_GUI {
 
 
     }
-    public static void main(String[] a) {
-        String mapFile = "map.txt";
-        Map2D map = loadMap(mapFile);
-        drawMap(map);
-    }
-
 
     /// ///////////// Private functions ///////////////
 
-    //The func return the color of the val,  -1=black else white
-    private static Color getColor( int v){
-        if(v== -1){return Color.BLACK;}
-        if(v== 0){return Color.GREEN;}
-        else {return Color.WHITE;}
+    //The func return the color of the val,  v<= -2 black , v=0  green(start point)  v=-1 gray, else white
+    private static Color getColor(int v) {
+        if (v <= -2) {return Color.BLACK;}
+        if (v == -1) {return Color.LIGHT_GRAY;}
+        if (v == 0) {return Color.GREEN;
+
+        } else {
+            return Color.WHITE;
+        }
     }
 
 

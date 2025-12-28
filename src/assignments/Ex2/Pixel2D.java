@@ -9,6 +9,7 @@ public interface Pixel2D {
      * @return the X coordinate (integer) of the pixel.
      */
     public int getX();
+
     /**
      * @return the Y coordinate (integer) of the pixel.
      */
@@ -16,8 +17,9 @@ public interface Pixel2D {
 
     /**
      * This method computes the 2D (Euclidean) distance between this pixel and p2 pixel, i.e., (Math.sqrt(dx*dx+dy*dy))
-     * @throws RuntimeException if p2==null.
+     *
      * @return the 2D Euclidean distance between the pixels.
+     * @throws RuntimeException if p2==null.
      */
     public double distance2D(Pixel2D p2);
 
